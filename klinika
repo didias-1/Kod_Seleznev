@@ -1,0 +1,778 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+from abc import ABC, abstractmethod
+from datetime import datetime
+
+
+# ============================================================
+# АБСТРАКТНЫЙ БАЗОВЫЙ КЛАСС
+# ============================================================
+
+class BaseEntity(ABC):
+    """Абстрактный базовый класс для всех сущностей клиники"""
+
+    def __init__(self, entity_id: int):
+        self._id = entity_id
+
+    @property
+    def entity_id(self):
+        return self._id
+
+    @entity_id.setter
+    def entity_id(self, value):
+        self._id = value
+
+    @abstractmethod
+    def get_info(self) -> str:
+        pass
+
+    @abstractmethod
+    def to_dict(self) -> dict:
+        pass
+
+    def __eq__(self, other):
+        if not isinstance(other, BaseEntity):
+            return NotImplemented
+        return self._id == other._id
+
+    def __hash__(self):
+        return hash(self._id)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(id={self._id})"
+
+    def __str__(self):
+        return self.get_info()
+
+
+# ============================================================
+# КЛАСС: Врач (Dentist)
+# ============================================================
+
+class Dentist(BaseEntity):
+    """Класс врача-стоматолога"""
+
+    def __init__(self, entity_id: int, full_name: str, specialization: str,
+                 experience: int, cabinet: str):
+        super().__init__(entity_id)
+        self._full_name = full_name
+        self._specialization = specialization
+        self._experience = experience
+        self._cabinet = cabinet
+
+    # ---- Геттеры и сеттеры ----
+    @property
+    def full_name(self):
+        return self._full_name
+
+    @full_name.setter
+    def full_name(self, value):
+        self._full_name = value
+
+    @property
+    def specialization(self):
+        return self._specialization
+
+    @specialization.setter
+    def specialization(self, value):
+        self._specialization = value
+
+    @property
+    def experience(self):
+        return self._experience
+
+    @experience.setter
+    def experience(self, value):
+        if value < 0:
+            raise ValueError("Опыт не может быть отрицательным")
+        self._experience = value
+
+    @property
+    def cabinet(self):
+        return self._cabinet
+
+    @cabinet.setter
+    def cabinet(self, value):
+        self._cabinet = value
+
+    # ---- Специальные методы ----
+    def __eq__(self, other):
+        if not isinstance(other, Dentist):
+            return NotImplemented
+        return self._full_name == other._full_name
+
+    def __hash__(self):
+        return hash(self._full_name)
+
+    def __repr__(self):
+        return f"Dentist(name={self._full_name!r}, spec={self._specialization!r})"
+
+    def __str__(self):
+        return f"Врач: {self._full_name} | {self._specialization} | Стаж: {self._experience} лет"
+
+    def __lt__(self, other):
+        if not isinstance(other, Dentist):
+            return NotImplemented
+        return self._experience < other._experience
+
+    # ---- Реализация абстрактных методов ----
+    def get_info(self) -> str:
+        return f"{self._full_name} — {self._specialization} (каб. {self._cabinet})"
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self._id,
+            "full_name": self._full_name,
+            "specialization": self._specialization,
+            "experience": self._experience,
+            "cabinet": self._cabinet,
+        }
+
+    # ---- Методы класса ----
+    @staticmethod
+    def validate_name(name: str) -> bool:
+        return len(name.strip()) >= 3
+
+
+# ============================================================
+# КЛАСС: Пациент (Patient)
+# ============================================================
+
+class Patient(BaseEntity):
+    """Класс пациента стоматологической клиники"""
+
+    def __init__(self, entity_id: int, full_name: str, phone: str,
+                 age: int, diagnosis: str):
+        super().__init__(entity_id)
+        self._full_name = full_name
+        self._phone = phone
+        self._age = age
+        self._diagnosis = diagnosis
+
+    # ---- Геттеры и сеттеры ----
+    @property
+    def full_name(self):
+        return self._full_name
+
+    @full_name.setter
+    def full_name(self, value):
+        self._full_name = value
+
+    @property
+    def phone(self):
+        return self._phone
+
+    @phone.setter
+    def phone(self, value):
+        self._phone = value
+
+    @property
+    def age(self):
+        return self._age
+
+    @age.setter
+    def age(self, value):
+        if value < 0 or value > 120:
+            raise ValueError("Некорректный возраст")
+        self._age = value
+
+    @property
+    def diagnosis(self):
+        return self._diagnosis
+
+    @diagnosis.setter
+    def diagnosis(self, value):
+        self._diagnosis = value
+
+    # ---- Специальные методы ----
+    def __eq__(self, other):
+        if not isinstance(other, Patient):
+            return NotImplemented
+        return self._full_name == other._full_name and self._phone == other._phone
+
+    def __hash__(self):
+        return hash((self._full_name, self._phone))
+
+    def __repr__(self):
+        return f"Patient(name={self._full_name!r}, age={self._age})"
+
+    def __str__(self):
+        return f"Пациент: {self._full_name}, {self._age} лет, тел. {self._phone}"
+
+    def __lt__(self, other):
+        if not isinstance(other, Patient):
+            return NotImplemented
+        return self._full_name < other._full_name
+
+    # ---- Реализация абстрактных методов ----
+    def get_info(self) -> str:
+        return f"{self._full_name} | {self._age} лет | {self._diagnosis}"
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self._id,
+            "full_name": self._full_name,
+            "phone": self._phone,
+            "age": self._age,
+            "diagnosis": self._diagnosis,
+        }
+
+    # ---- Методы класса ----
+    @staticmethod
+    def validate_phone(phone: str) -> bool:
+        digits = "".join(filter(str.isdigit, phone))
+        return len(digits) >= 10
+
+
+# ============================================================
+# КЛАСС: Услуга (Service)
+# ============================================================
+
+class Service(BaseEntity):
+    """Класс стоматологической услуги"""
+
+    def __init__(self, entity_id: int, name: str, price: float, duration: int):
+        super().__init__(entity_id)
+        self._name = name
+        self._price = price
+        self._duration = duration  # в минутах
+
+    # ---- Геттеры и сеттеры ----
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
+    @property
+    def price(self):
+        return self._price
+
+    @price.setter
+    def price(self, value):
+        if value < 0:
+            raise ValueError("Цена не может быть отрицательной")
+        self._price = value
+
+    @property
+    def duration(self):
+        return self._duration
+
+    @duration.setter
+    def duration(self, value):
+        self._duration = value
+
+    # ---- Специальные методы ----
+    def __eq__(self, other):
+        if not isinstance(other, Service):
+            return NotImplemented
+        return self._name == other._name
+
+    def __hash__(self):
+        return hash(self._name)
+
+    def __repr__(self):
+        return f"Service(name={self._name!r}, price={self._price})"
+
+    def __str__(self):
+        return f"{self._name} — {self._price:.2f} руб. ({self._duration} мин)"
+
+    def __lt__(self, other):
+        if not isinstance(other, Service):
+            return NotImplemented
+        return self._price < other._price
+
+    def __add__(self, other):
+        if not isinstance(other, Service):
+            return NotImplemented
+        return self._price + other._price
+
+    # ---- Реализация абстрактных методов ----
+    def get_info(self) -> str:
+        return f"{self._name} | {self._price:.2f} руб. | {self._duration} мин"
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self._id,
+            "name": self._name,
+            "price": self._price,
+            "duration": self._duration,
+        }
+
+    # ---- Методы класса ----
+    @staticmethod
+    def apply_discount(price: float, discount_percent: float) -> float:
+        return round(price * (1 - discount_percent / 100), 2)
+
+
+# ============================================================
+# КАСТОМНЫЙ КЛАСС МАППИНГА (вместо dict)
+# ============================================================
+
+class CustomMap:
+    """Кастомный маппинг (замена dict)"""
+
+    def __init__(self):
+        self._keys = []
+        self._values = []
+
+    def set(self, key, value):
+        if key in self._keys:
+            self._values[self._keys.index(key)] = value
+        else:
+            self._keys.append(key)
+            self._values.append(value)
+
+    def get(self, key, default=None):
+        if key in self._keys:
+            return self._values[self._keys.index(key)]
+        return default
+
+    def remove(self, key):
+        if key in self._keys:
+            i = self._keys.index(key)
+            self._keys.pop(i)
+            self._values.pop(i)
+
+    def keys(self):
+        return self._keys.copy()
+
+    def values(self):
+        return self._values.copy()
+
+    def items(self):
+        return list(zip(self._keys, self._values))
+
+    def __len__(self):
+        return len(self._keys)
+
+    def __contains__(self, key):
+        return key in self._keys
+
+    def __eq__(self, other):
+        if not isinstance(other, CustomMap):
+            return NotImplemented
+        return self.items() == other.items()
+
+    def __repr__(self):
+        return f"CustomMap({dict(zip(self._keys, self._values))})"
+
+    def __str__(self):
+        return str(dict(zip(self._keys, self._values)))
+
+
+# ============================================================
+# ГЛАВНОЕ ОКНО ПРИЛОЖЕНИЯ
+# ============================================================
+
+class DentalApp(tk.Tk):
+    """Главное окно стоматологической клиники"""
+
+    def __init__(self):
+        super().__init__()
+        self.title("Стоматологическая клиника «Белый Зуб»")
+        self.geometry("1000x700")
+        self.configure(bg="#eaf4f8")
+
+        self._doctors = []
+        self._patients = []
+        self._services = []
+        self._doctor_map = CustomMap()
+        self._patient_map = CustomMap()
+        self._service_map = CustomMap()
+        self._current_user = None
+
+        self._init_data()
+        self._build_ui()
+        self._center_window()
+
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    # ---- Инициализация данных ----
+    def _init_data(self):
+        doctors_data = [
+            ("Иванов Иван Иванович", "Терапевт", 15, "101"),
+            ("Петрова Анна Сергеевна", "Ортодонт", 10, "102"),
+            ("Сидоров Пётр Алексеевич", "Хирург", 20, "103"),
+            ("Кузнецова Мария Ивановна", "Гигиенист", 7, "104"),
+            ("Смирнов Алексей Петрович", "Имплантолог", 12, "105"),
+            ("Волкова Ольга Дмитриевна", "Детский стоматолог", 9, "106"),
+            ("Морозов Сергей Николаевич", "Ортопед", 18, "107"),
+            ("Новикова Елена Владимировна", "Пародонтолог", 11, "108"),
+            ("Фёдоров Дмитрий Олегович", "Терапевт", 6, "109"),
+            ("Егорова Светлана Павловна", "Рентгенолог", 14, "110"),
+        ]
+        for i, (name, spec, exp, cab) in enumerate(doctors_data, 1):
+            d = Dentist(i, name, spec, exp, cab)
+            self._doctors.append(d)
+            self._doctor_map.set(i, d)
+
+        patients_data = [
+            ("Александров Александр", "+7(900)111-22-33", 34, "Кариес"),
+            ("Борисова Татьяна", "+7(900)222-33-44", 28, "Пульпит"),
+            ("Виноградов Олег", "+7(900)333-44-55", 45, "Периодонтит"),
+            ("Григорьева Ирина", "+7(900)444-55-66", 22, "Профилактика"),
+            ("Дмитриев Артём", "+7(900)555-66-77", 31, "Имплантация"),
+            ("Ефимова Наталья", "+7(900)666-77-88", 40, "Ортодонтия"),
+            ("Жуков Максим", "+7(900)777-88-99", 19, "Кариес"),
+            ("Зайцева Ксения", "+7(900)888-99-00", 25, "Отбеливание"),
+            ("Ильин Роман", "+7(900)999-00-11", 37, "Пародонтит"),
+            ("Ковалёва Юлия", "+7(900)000-11-22", 29, "Реставрация"),
+        ]
+        for i, (name, phone, age, diag) in enumerate(patients_data, 1):
+            p = Patient(i, name, phone, age, diag)
+            self._patients.append(p)
+            self._patient_map.set(i, p)
+
+        services_data = [
+            ("Консультация", 500, 30),
+            ("Лечение кариеса", 3500, 60),
+            ("Пломбирование", 4200, 45),
+            ("Чистка зубов", 2500, 40),
+            ("Отбеливание", 12000, 90),
+            ("Имплантация", 45000, 120),
+            ("Протезирование", 30000, 90),
+            ("Удаление зуба", 2000, 30),
+            ("Рентген", 800, 15),
+            ("Брекеты", 80000, 60),
+        ]
+        for i, (name, price, dur) in enumerate(services_data, 1):
+            s = Service(i, name, price, dur)
+            self._services.append(s)
+            self._service_map.set(i, s)
+
+    # ---- Интерфейс ----
+    def _build_ui(self):
+        # 1) Заголовок
+        self._title_label = tk.Label(
+            self, text="🦷 Стоматологическая клиника «Белый Зуб»",
+            font=("Arial", 20, "bold"), bg="#eaf4f8", fg="#1a5276"
+        )
+        self._title_label.pack(pady=12)
+
+        # 2) Панель входа
+        login_frame = tk.LabelFrame(self, text="Вход в систему", padx=10, pady=10, bg="#eaf4f8")
+        login_frame.pack(pady=5, padx=20, fill=tk.X)
+
+        tk.Label(login_frame, text="Логин:", bg="#eaf4f8").grid(row=0, column=0, padx=5, sticky="e")
+        self._login_entry = tk.Entry(login_frame, width=18)
+        self._login_entry.grid(row=0, column=1, padx=5)
+
+        tk.Label(login_frame, text="Пароль:", bg="#eaf4f8").grid(row=0, column=2, padx=5, sticky="e")
+        self._password_entry = tk.Entry(login_frame, width=18, show="*")
+        self._password_entry.grid(row=0, column=3, padx=5)
+
+        self._login_btn = tk.Button(
+            login_frame, text="Войти", command=self._login,
+            bg="#2980b9", fg="white", width=12, relief=tk.FLAT
+        )
+        self._login_btn.grid(row=0, column=4, padx=8)
+
+        self._logout_btn = tk.Button(
+            login_frame, text="Выйти", command=self._logout,
+            bg="#c0392b", fg="white", width=12, relief=tk.FLAT, state=tk.DISABLED
+        )
+        self._logout_btn.grid(row=0, column=5, padx=8)
+
+        # 3) Статус
+        self._status_label = tk.Label(
+            self, text="Не авторизован", font=("Arial", 10, "italic"),
+            bg="#eaf4f8", fg="#7f8c8d"
+        )
+        self._status_label.pack(pady=4)
+
+        # 4) Вкладки
+        self._notebook = ttk.Notebook(self)
+        self._notebook.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
+
+        self._doctors_tab = tk.Frame(self._notebook, bg="#eaf4f8")
+        self._patients_tab = tk.Frame(self._notebook, bg="#eaf4f8")
+        self._services_tab = tk.Frame(self._notebook, bg="#eaf4f8")
+
+        self._notebook.add(self._doctors_tab, text="Врачи")
+        self._notebook.add(self._patients_tab, text="Пациенты")
+        self._notebook.add(self._services_tab, text="Услуги")
+
+        self._build_doctors_tab()
+        self._build_patients_tab()
+        self._build_services_tab()
+
+        # 5) Нижняя панель
+        bottom_frame = tk.Frame(self, bg="#eaf4f8")
+        bottom_frame.pack(pady=8, fill=tk.X)
+
+        self._stats_label = tk.Label(
+            bottom_frame, text="", font=("Arial", 11, "bold"),
+            bg="#eaf4f8", fg="#1a5276"
+        )
+        self._stats_label.pack()
+
+        self._update_stats()
+
+    # ---- Вкладка «Врачи» ----
+    def _build_doctors_tab(self):
+        # Фильтр
+        filter_frame = tk.Frame(self._doctors_tab, bg="#eaf4f8")
+        filter_frame.pack(pady=8, fill=tk.X)
+
+        tk.Label(filter_frame, text="Специализация:", bg="#eaf4f8").pack(side=tk.LEFT, padx=5)
+        self._spec_var = tk.StringVar(value="Все")
+        self._spec_combo = ttk.Combobox(
+            filter_frame, textvariable=self._spec_var,
+            values=["Все", "Терапевт", "Ортодонт", "Хирург", "Гигиенист",
+                    "Имплантолог", "Детский стоматолог", "Ортопед",
+                    "Пародонтолог", "Рентгенолог"],
+            width=20, state="readonly"
+        )
+        self._spec_combo.pack(side=tk.LEFT, padx=5)
+        self._spec_combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_doctors())
+
+        tk.Button(
+            filter_frame, text="Сбросить", command=self._reset_doctors_filter,
+            bg="#95a5a6", fg="white", width=12, relief=tk.FLAT
+        ).pack(side=tk.LEFT, padx=10)
+
+        # Таблица
+        columns = ("id", "name", "spec", "exp", "cabinet")
+        self._doctors_tree = ttk.Treeview(self._doctors_tab, columns=columns,
+                                          show="headings", height=12)
+        self._doctors_tree.heading("id", text="ID")
+        self._doctors_tree.heading("name", text="ФИО")
+        self._doctors_tree.heading("spec", text="Специализация")
+        self._doctors_tree.heading("exp", text="Стаж")
+        self._doctors_tree.heading("cabinet", text="Кабинет")
+
+        self._doctors_tree.column("id", width=50, anchor="center")
+        self._doctors_tree.column("name", width=250, anchor="w")
+        self._doctors_tree.column("spec", width=180, anchor="center")
+        self._doctors_tree.column("exp", width=80, anchor="center")
+        self._doctors_tree.column("cabinet", width=80, anchor="center")
+
+        scroll = ttk.Scrollbar(self._doctors_tab, orient=tk.VERTICAL,
+                               command=self._doctors_tree.yview)
+        self._doctors_tree.configure(yscrollcommand=scroll.set)
+
+        self._doctors_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self._refresh_doctors()
+
+    # ---- Вкладка «Пациенты» ----
+    def _build_patients_tab(self):
+        filter_frame = tk.Frame(self._patients_tab, bg="#eaf4f8")
+        filter_frame.pack(pady=8, fill=tk.X)
+
+        tk.Label(filter_frame, text="Диагноз:", bg="#eaf4f8").pack(side=tk.LEFT, padx=5)
+        self._diag_var = tk.StringVar(value="Все")
+        self._diag_combo = ttk.Combobox(
+            filter_frame, textvariable=self._diag_var,
+            values=["Все", "Кариес", "Пульпит", "Периодонтит", "Профилактика",
+                    "Имплантация", "Ортодонтия", "Отбеливание",
+                    "Пародонтит", "Реставрация"],
+            width=20, state="readonly"
+        )
+        self._diag_combo.pack(side=tk.LEFT, padx=5)
+        self._diag_combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_patients())
+
+        tk.Label(filter_frame, text="Мин. возраст:", bg="#eaf4f8").pack(side=tk.LEFT, padx=5)
+        self._min_age_entry = tk.Entry(filter_frame, width=8)
+        self._min_age_entry.pack(side=tk.LEFT, padx=5)
+
+        tk.Label(filter_frame, text="Макс. возраст:", bg="#eaf4f8").pack(side=tk.LEFT, padx=5)
+        self._max_age_entry = tk.Entry(filter_frame, width=8)
+        self._max_age_entry.pack(side=tk.LEFT, padx=5)
+
+        tk.Button(
+            filter_frame, text="Применить", command=self._refresh_patients,
+            bg="#27ae60", fg="white", width=12, relief=tk.FLAT
+        ).pack(side=tk.LEFT, padx=10)
+
+        tk.Button(
+            filter_frame, text="Сбросить", command=self._reset_patients_filter,
+            bg="#95a5a6", fg="white", width=12, relief=tk.FLAT
+        ).pack(side=tk.LEFT, padx=5)
+
+        columns = ("id", "name", "phone", "age", "diagnosis")
+        self._patients_tree = ttk.Treeview(self._patients_tab, columns=columns,
+                                           show="headings", height=12)
+        self._patients_tree.heading("id", text="ID")
+        self._patients_tree.heading("name", text="ФИО")
+        self._patients_tree.heading("phone", text="Телефон")
+        self._patients_tree.heading("age", text="Возраст")
+        self._patients_tree.heading("diagnosis", text="Диагноз")
+
+        self._patients_tree.column("id", width=50, anchor="center")
+        self._patients_tree.column("name", width=220, anchor="w")
+        self._patients_tree.column("phone", width=160, anchor="center")
+        self._patients_tree.column("age", width=80, anchor="center")
+        self._patients_tree.column("diagnosis", width=160, anchor="center")
+
+        scroll = ttk.Scrollbar(self._patients_tab, orient=tk.VERTICAL,
+                               command=self._patients_tree.yview)
+        self._patients_tree.configure(yscrollcommand=scroll.set)
+
+        self._patients_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self._refresh_patients()
+
+    # ---- Вкладка «Услуги» ----
+    def _build_services_tab(self):
+        columns = ("id", "name", "price", "duration")
+        self._services_tree = ttk.Treeview(self._services_tab, columns=columns,
+                                           show="headings", height=12)
+        self._services_tree.heading("id", text="ID")
+        self._services_tree.heading("name", text="Название")
+        self._services_tree.heading("price", text="Цена (руб.)")
+        self._services_tree.heading("duration", text="Длительность (мин)")
+
+        self._services_tree.column("id", width=50, anchor="center")
+        self._services_tree.column("name", width=300, anchor="w")
+        self._services_tree.column("price", width=150, anchor="center")
+        self._services_tree.column("duration", width=150, anchor="center")
+
+        scroll = ttk.Scrollbar(self._services_tab, orient=tk.VERTICAL,
+                               command=self._services_tree.yview)
+        self._services_tree.configure(yscrollcommand=scroll.set)
+
+        self._services_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self._refresh_services()
+
+    # ---- Обновление таблиц ----
+    def _refresh_doctors(self):
+        for row in self._doctors_tree.get_children():
+            self._doctors_tree.delete(row)
+        spec = self._spec_var.get()
+        for d in self._doctors:
+            if spec != "Все" and d.specialization != spec:
+                continue
+            self._doctors_tree.insert("", tk.END, values=(
+                d.entity_id, d.full_name, d.specialization, d.experience, d.cabinet
+            ))
+
+    def _refresh_patients(self):
+        for row in self._patients_tree.get_children():
+            self._patients_tree.delete(row)
+        diag = self._diag_var.get()
+        min_age = self._get_int(self._min_age_entry.get())
+        max_age = self._get_int(self._max_age_entry.get())
+        for p in self._patients:
+            if diag != "Все" and p.diagnosis != diag:
+                continue
+            if min_age is not None and p.age < min_age:
+                continue
+            if max_age is not None and p.age > max_age:
+                continue
+            self._patients_tree.insert("", tk.END, values=(
+                p.entity_id, p.full_name, p.phone, p.age, p.diagnosis
+            ))
+
+    def _refresh_services(self):
+        for row in self._services_tree.get_children():
+            self._services_tree.delete(row)
+        for s in self._services:
+            self._services_tree.insert("", tk.END, values=(
+                s.entity_id, s.name, f"{s.price:.2f}", s.duration
+            ))
+
+    # ---- Сброс фильтров ----
+    def _reset_doctors_filter(self):
+        self._spec_var.set("Все")
+        self._refresh_doctors()
+
+    def _reset_patients_filter(self):
+        self._diag_var.set("Все")
+        self._min_age_entry.delete(0, tk.END)
+        self._max_age_entry.delete(0, tk.END)
+        self._refresh_patients()
+
+    # ---- Статистика ----
+    def _update_stats(self):
+        total_services_cost = sum(s.price for s in self._services)
+        self._stats_label.config(
+            text=f"Врачей: {len(self._doctors)} | Пациентов: {len(self._patients)} | "
+                 f"Услуг: {len(self._services)} | Суммарная стоимость услуг: {total_services_cost:.2f} руб."
+        )
+
+    # ---- Вспомогательные методы ----
+    @staticmethod
+    def _get_int(text: str):
+        try:
+            return int(text)
+        except (ValueError, TypeError):
+            return None
+
+    # ---- Авторизация ----
+    def _login(self):
+        login = self._login_entry.get().strip()
+        password = self._password_entry.get().strip()
+
+        # Тестовые учётные записи
+        valid_users = {
+            "admin": ("admin123", "admin"),
+            "doctor": ("doctor123", "doctor"),
+            "registrator": ("reg123", "registrator"),
+        }
+
+        if login in valid_users and valid_users[login][0] == password:
+            self._current_user = login
+            self._status_label.config(
+                text=f"Авторизован: {login} | Роль: {valid_users[login][1]}",
+                fg="#27ae60"
+            )
+            self._login_btn.config(state=tk.DISABLED)
+            self._logout_btn.config(state=tk.NORMAL)
+            self._login_entry.delete(0, tk.END)
+            self._password_entry.delete(0, tk.END)
+            messagebox.showinfo("Успех", f"Добро пожаловать, {login}!")
+        else:
+            messagebox.showerror("Ошибка", "Неверный логин или пароль!")
+
+    def _logout(self):
+        self._current_user = None
+        self._status_label.config(text="Не авторизован", fg="#7f8c8d")
+        self._login_btn.config(state=tk.NORMAL)
+        self._logout_btn.config(state=tk.DISABLED)
+
+    # ---- Центрирование окна ----
+    def _center_window(self):
+        self.update_idletasks()
+        w, h = self.winfo_width(), self.winfo_height()
+        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        x, y = (sw - w) // 2, (sh - h) // 2
+        self.geometry(f"{w}x{h}+{x}+{y}")
+
+    # ---- Сохранение отчёта ----
+    def _on_close(self):
+        fmt = "%d.%m.%Y %H:%M:%S"
+        now = datetime.now().strftime(fmt)
+
+        try:
+            with open("report.txt", "w", encoding="utf-8") as f:
+                f.write("+----------------------------------------------------------+\n")
+                f.write("| login        | time_in              | time_out              |\n")
+                f.write("|--------------|----------------------|-----------------------|\n")
+                f.write(f"| {'admin':<12} | {now:<20} | {now:<21} |\n")
+                f.write(f"| {'doctor':<12} | {now:<20} | {now:<21} |\n")
+                f.write(f"| {'registrator':<12} | {now:<20} | {now:<21} |\n")
+                f.write("+----------------------------------------------------------+\n")
+                f.write(f"\nВсего врачей: {len(self._doctors)}\n")
+                f.write(f"Всего пациентов: {len(self._patients)}\n")
+                f.write(f"Всего услуг: {len(self._services)}\n")
+        except Exception as e:
+            print(f"Ошибка сохранения отчёта: {e}")
+
+        self.destroy()
+
+
+# ============================================================
+# ЗАПУСК
+# ============================================================
+
+if __name__ == "__main__":
+    app = DentalApp()
+    app.mainloop()
