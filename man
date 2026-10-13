@@ -1,0 +1,852 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+from abc import ABC, abstractmethod
+from datetime import datetime
+
+
+# ============================================================
+# АБСТРАКТНЫЙ БАЗОВЫЙ КЛАСС
+# ============================================================
+
+class BaseEntity(ABC):
+    """Абстрактный базовый класс для всех сущностей"""
+
+    def __init__(self, entity_id: int):
+        self._id = entity_id
+
+    @property
+    def entity_id(self):
+        return self._id
+
+    @entity_id.setter
+    def entity_id(self, value):
+        self._id = value
+
+    @abstractmethod
+    def get_info(self) -> str:
+        pass
+
+    @abstractmethod
+    def to_dict(self) -> dict:
+        pass
+
+    def __eq__(self, other):
+        if not isinstance(other, BaseEntity):
+            return NotImplemented
+        return self._id == other._id
+
+    def __hash__(self):
+        return hash(self._id)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(id={self._id})"
+
+    def __str__(self):
+        return self.get_info()
+
+
+# ============================================================
+# ПОЛЬЗОВАТЕЛЬСКИЙ КЛАСС: User
+# ============================================================
+
+class User(BaseEntity):
+    """Класс пользователя"""
+
+    def __init__(self, entity_id: int, login: str, password: str, role: str = "user"):
+        super().__init__(entity_id)
+        self._login = login
+        self._password = password
+        self._role = role
+        self._time_in = None
+        self._time_out = None
+
+    # ---- Геттеры и сеттеры ----
+    @property
+    def login(self):
+        return self._login
+
+    @login.setter
+    def login(self, value):
+        self._login = value
+
+    @property
+    def password(self):
+        return self._password
+
+    @password.setter
+    def password(self, value):
+        self._password = value
+
+    @property
+    def role(self):
+        return self._role
+
+    @role.setter
+    def role(self, value):
+        self._role = value
+
+    @property
+    def time_in(self):
+        return self._time_in
+
+    @time_in.setter
+    def time_in(self, value):
+        self._time_in = value
+
+    @property
+    def time_out(self):
+        return self._time_out
+
+    @time_out.setter
+    def time_out(self, value):
+        self._time_out = value
+
+    # ---- Переопределение специальных методов ----
+    def __eq__(self, other):
+        if not isinstance(other, User):
+            return NotImplemented
+        return self._login == other._login
+
+    def __hash__(self):
+        return hash(self._login)
+
+    def __repr__(self):
+        return f"User(login={self._login!r}, role={self._role!r})"
+
+    def __str__(self):
+        return f"Пользователь: {self._login} ({self._role})"
+
+    def __lt__(self, other):
+        if not isinstance(other, User):
+            return NotImplemented
+        return self._login < other._login
+
+    # ---- Реализация абстрактных методов ----
+    def get_info(self) -> str:
+        return f"Пользователь: {self._login} | Роль: {self._role}"
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self._id,
+            "login": self._login,
+            "role": self._role,
+            "time_in": self._time_in,
+            "time_out": self._time_out,
+        }
+
+    # ---- Методы класса ----
+    @staticmethod
+    def validate_login(login: str) -> bool:
+        return len(login) >= 3 and login.isalnum()
+
+    @staticmethod
+    def validate_password(password: str) -> bool:
+        return len(password) >= 4
+
+
+# ============================================================
+# ПОЛЬЗОВАТЕЛЬСКИЙ КЛАСС: Product
+# ============================================================
+
+class Product(BaseEntity):
+    """Класс товара"""
+
+    def __init__(self, entity_id: int, name: str, price: float, quantity: int, category: str):
+        super().__init__(entity_id)
+        self._name = name
+        self._price = price
+        self._quantity = quantity
+        self._category = category
+
+    # ---- Геттеры и сеттеры ----
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
+    @property
+    def price(self):
+        return self._price
+
+    @price.setter
+    def price(self, value):
+        if value < 0:
+            raise ValueError("Цена не может быть отрицательной")
+        self._price = value
+
+    @property
+    def quantity(self):
+        return self._quantity
+
+    @quantity.setter
+    def quantity(self, value):
+        self._quantity = value
+
+    @property
+    def category(self):
+        return self._category
+
+    @category.setter
+    def category(self, value):
+        self._category = value
+
+    @property
+    def total_cost(self):
+        return self._price * self._quantity
+
+    # ---- Переопределение специальных методов ----
+    def __eq__(self, other):
+        if not isinstance(other, Product):
+            return NotImplemented
+        return self._name == other._name and self._category == other._category
+
+    def __hash__(self):
+        return hash((self._name, self._category))
+
+    def __repr__(self):
+        return f"Product(name={self._name!r}, price={self._price}, qty={self._quantity})"
+
+    def __str__(self):
+        return f"{self._name} — {self._price} руб. (x{self._quantity})"
+
+    def __lt__(self, other):
+        if not isinstance(other, Product):
+            return NotImplemented
+        return self._price < other._price
+
+    def __add__(self, other):
+        if not isinstance(other, Product):
+            return NotImplemented
+        return self.total_cost + other.total_cost
+
+    # ---- Реализация абстрактных методов ----
+    def get_info(self) -> str:
+        return f"{self._name} | {self._category} | {self._price} руб. | {self._quantity} шт."
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self._id,
+            "name": self._name,
+            "price": self._price,
+            "quantity": self._quantity,
+            "category": self._category,
+        }
+
+    # ---- Методы класса ----
+    @staticmethod
+    def calculate_discount(price: float, discount_percent: float) -> float:
+        return round(price * (1 - discount_percent / 100), 2)
+
+
+# ============================================================
+# КАСТОМНЫЙ КЛАСС ДЛЯ МАППИНГА (вместо dict)
+# ============================================================
+
+class CustomMap:
+    """Кастомный класс-маппинг (замена dict)"""
+
+    def __init__(self):
+        self._keys = []
+        self._values = []
+
+    def set(self, key, value):
+        if key in self._keys:
+            index = self._keys.index(key)
+            self._values[index] = value
+        else:
+            self._keys.append(key)
+            self._values.append(value)
+
+    def get(self, key, default=None):
+        if key in self._keys:
+            return self._values[self._keys.index(key)]
+        return default
+
+    def remove(self, key):
+        if key in self._keys:
+            index = self._keys.index(key)
+            self._keys.pop(index)
+            self._values.pop(index)
+
+    def keys(self):
+        return self._keys.copy()
+
+    def values(self):
+        return self._values.copy()
+
+    def items(self):
+        return list(zip(self._keys, self._values))
+
+    def __len__(self):
+        return len(self._keys)
+
+    def __repr__(self):
+        return f"CustomMap({dict(zip(self._keys, self._values))})"
+
+    def __str__(self):
+        return str(dict(zip(self._keys, self._values)))
+
+    def __eq__(self, other):
+        if not isinstance(other, CustomMap):
+            return NotImplemented
+        return self.items() == other.items()
+
+    def __contains__(self, key):
+        return key in self._keys
+
+
+# ============================================================
+# ГЛАВНОЕ ОКНО ПРИЛОЖЕНИЯ
+# ============================================================
+
+class App(tk.Tk):
+    """Главное окно приложения"""
+
+    def __init__(self):
+        super().__init__()
+        self.title("Управление товарами — Вариант 48")
+        self.geometry("900x650")
+        self.configure(bg="#f0f0f0")
+
+        self._users = []
+        self._products = []
+        self._current_user = None
+        self._product_map = CustomMap()
+
+        self._init_data()
+        self._build_ui()
+        self._center_window()
+
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    # ---- Инициализация тестовых данных ----
+    def _init_data(self):
+        users_data = [
+            ("admin", "admin123", "admin"),
+            ("ivanov", "pass1234", "user"),
+            ("petrova", "pass5678", "user"),
+            ("sidorov", "pass9012", "manager"),
+            ("kuznetsova", "pass3456", "user"),
+            ("smirnov", "pass7890", "user"),
+            ("volkov", "pass2345", "manager"),
+            ("morozova", "pass6789", "user"),
+            ("novikov", "pass0123", "user"),
+            ("fedorova", "pass4567", "admin"),
+        ]
+        for i, (login, pwd, role) in enumerate(users_data, start=1):
+            self._users.append(User(i, login, pwd, role))
+
+        products_data = [
+            ("Ноутбук", 55000, 10, "Электроника"),
+            ("Мышь", 1500, 50, "Аксессуары"),
+            ("Клавиатура", 3000, 30, "Аксессуары"),
+            ("Монитор", 20000, 15, "Электроника"),
+            ("Наушники", 5000, 25, "Аудио"),
+            ("Колонки", 7000, 20, "Аудио"),
+            ("Принтер", 12000, 8, "Периферия"),
+            ("Сканер", 9000, 12, "Периферия"),
+            ("Флешка", 800, 100, "Носители"),
+            ("Внешний диск", 6000, 18, "Носители"),
+        ]
+        for i, (name, price, qty, cat) in enumerate(products_data, start=1):
+            p = Product(i, name, price, qty, cat)
+            self._products.append(p)
+            self._product_map.set(i, p)
+
+    # ---- Построение интерфейса ----
+    def _build_ui(self):
+        # -------- Заголовок --------
+        title_frame = tk.Frame(self, bg="#f0f0f0")
+        title_frame.pack(pady=10, fill=tk.X)
+
+        self._title_label = tk.Label(
+            title_frame,
+            text="Система управления товарами",
+            font=("Arial", 18, "bold"),
+            bg="#f0f0f0",
+            fg="#2c3e50"
+        )
+        self._title_label.pack()
+
+        # -------- Панель входа --------
+        login_frame = tk.LabelFrame(self, text="Вход в систему", padx=10, pady=10, bg="#f0f0f0")
+        login_frame.pack(pady=5, padx=20, fill=tk.X)
+
+        tk.Label(login_frame, text="Логин:", bg="#f0f0f0").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        self._login_entry = tk.Entry(login_frame, width=20)
+        self._login_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(login_frame, text="Пароль:", bg="#f0f0f0").grid(row=0, column=2, padx=5, pady=5, sticky="e")
+        self._password_entry = tk.Entry(login_frame, width=20, show="*")
+        self._password_entry.grid(row=0, column=3, padx=5, pady=5)
+
+        self._login_btn = tk.Button(
+            login_frame,
+            text="Войти",
+            command=self._login,
+            bg="#3498db",
+            fg="white",
+            width=12,
+            relief=tk.FLAT
+        )
+        self._login_btn.grid(row=0, column=4, padx=10, pady=5)
+
+        self._logout_btn = tk.Button(
+            login_frame,
+            text="Выйти",
+            command=self._logout,
+            bg="#e74c3c",
+            fg="white",
+            width=12,
+            relief=tk.FLAT,
+            state=tk.DISABLED
+        )
+        self._logout_btn.grid(row=0, column=5, padx=10, pady=5)
+
+        # -------- Статус --------
+        self._status_label = tk.Label(
+            self,
+            text="Не авторизован",
+            font=("Arial", 10, "italic"),
+            bg="#f0f0f0",
+            fg="#7f8c8d"
+        )
+        self._status_label.pack(pady=5)
+
+        # -------- Панель фильтрации --------
+        filter_frame = tk.LabelFrame(self, text="Фильтрация товаров", padx=10, pady=10, bg="#f0f0f0")
+        filter_frame.pack(pady=5, padx=20, fill=tk.X)
+
+        tk.Label(filter_frame, text="Категория:", bg="#f0f0f0").grid(row=0, column=0, padx=5, sticky="e")
+        self._category_var = tk.StringVar(value="Все")
+        self._category_combo = ttk.Combobox(
+            filter_frame,
+            textvariable=self._category_var,
+            values=["Все", "Электроника", "Аксессуары", "Аудио", "Периферия", "Носители"],
+            width=18,
+            state="readonly"
+        )
+        self._category_combo.grid(row=0, column=1, padx=5)
+        self._category_combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_table())
+
+        tk.Label(filter_frame, text="Мин. цена:", bg="#f0f0f0").grid(row=0, column=2, padx=5, sticky="e")
+        self._min_price_entry = tk.Entry(filter_frame, width=12)
+        self._min_price_entry.grid(row=0, column=3, padx=5)
+
+        tk.Label(filter_frame, text="Макс. цена:", bg="#f0f0f0").grid(row=0, column=4, padx=5, sticky="e")
+        self._max_price_entry = tk.Entry(filter_frame, width=12)
+        self._max_price_entry.grid(row=0, column=5, padx=5)
+
+        self._filter_btn = tk.Button(
+            filter_frame,
+            text="Применить",
+            command=self._refresh_table,
+            bg="#2ecc71",
+            fg="white",
+            width=12,
+            relief=tk.FLAT
+        )
+        self._filter_btn.grid(row=0, column=6, padx=10)
+
+        self._reset_btn = tk.Button(
+            filter_frame,
+            text="Сбросить",
+            command=self._reset_filter,
+            bg="#95a5a6",
+            fg="white",
+            width=12,
+            relief=tk.FLAT
+        )
+        self._reset_btn.grid(row=0, column=7, padx=5)
+
+        # -------- Таблица товаров --------
+        table_frame = tk.Frame(self, bg="#f0f0f0")
+        table_frame.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
+
+        columns = ("id", "name", "category", "price", "quantity", "total")
+        self._tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=12)
+
+        self._tree.heading("id", text="ID")
+        self._tree.heading("name", text="Название")
+        self._tree.heading("category", text="Категория")
+        self._tree.heading("price", text="Цена")
+        self._tree.heading("quantity", text="Кол-во")
+        self._tree.heading("total", text="Стоимость")
+
+        self._tree.column("id", width=50, anchor="center")
+        self._tree.column("name", width=180, anchor="w")
+        self._tree.column("category", width=120, anchor="center")
+        self._tree.column("price", width=100, anchor="center")
+        self._tree.column("quantity", width=80, anchor="center")
+        self._tree.column("total", width=120, anchor="center")
+
+        scrollbar = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self._tree.yview)
+        self._tree.configure(yscrollcommand=scrollbar.set)
+
+        self._tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # -------- Панель действий --------
+        action_frame = tk.Frame(self, bg="#f0f0f0")
+        action_frame.pack(pady=10)
+
+        self._add_btn = tk.Button(
+            action_frame,
+            text="Добавить товар",
+            command=self._add_product,
+            bg="#3498db",
+            fg="white",
+            width=16,
+            relief=tk.FLAT
+        )
+        self._add_btn.grid(row=0, column=0, padx=5)
+
+        self._edit_btn = tk.Button(
+            action_frame,
+            text="Редактировать",
+            command=self._edit_product,
+            bg="#f39c12",
+            fg="white",
+            width=16,
+            relief=tk.FLAT
+        )
+        self._edit_btn.grid(row=0, column=1, padx=5)
+
+        self._delete_btn = tk.Button(
+            action_frame,
+            text="Удалить товар",
+            command=self._delete_product,
+            bg="#e74c3c",
+            fg="white",
+            width=16,
+            relief=tk.FLAT
+        )
+        self._delete_btn.grid(row=0, column=2, padx=5)
+
+        self._refresh_btn = tk.Button(
+            action_frame,
+            text="Обновить",
+            command=self._refresh_table,
+            bg="#1abc9c",
+            fg="white",
+            width=16,
+            relief=tk.FLAT
+        )
+        self._refresh_btn.grid(row=0, column=3, padx=5)
+
+        # -------- Статистика --------
+        self._stats_label = tk.Label(
+            self,
+            text="Всего товаров: 0 | Общая стоимость: 0 руб.",
+            font=("Arial", 11, "bold"),
+            bg="#f0f0f0",
+            fg="#2c3e50"
+        )
+        self._stats_label.pack(pady=5)
+
+        # -------- Заполнение таблицы --------
+        self._refresh_table()
+
+    # ---- Центрирование окна ----
+    def _center_window(self):
+        self.update_idletasks()
+        w = self.winfo_width()
+        h = self.winfo_height()
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        self.geometry(f"{w}x{h}+{x}+{y}")
+
+    # ---- Авторизация ----
+    def _login(self):
+        login = self._login_entry.get().strip()
+        password = self._password_entry.get().strip()
+
+        if not login or not password:
+            messagebox.showwarning("Ошибка", "Введите логин и пароль!")
+            return
+
+        for user in self._users:
+            if user.login == login and user.password == password:
+                self._current_user = user
+                user.time_in = datetime.now()
+                self._status_label.config(
+                    text=f"Авторизован: {user.login} | Роль: {user.role}",
+                    fg="#27ae60"
+                )
+                self._login_btn.config(state=tk.DISABLED)
+                self._logout_btn.config(state=tk.NORMAL)
+                self._login_entry.delete(0, tk.END)
+                self._password_entry.delete(0, tk.END)
+                messagebox.showinfo("Успех", f"Добро пожаловать, {user.login}!")
+                return
+
+        messagebox.showerror("Ошибка", "Неверный логин или пароль!")
+
+    # ---- Выход из системы ----
+    def _logout(self):
+        if self._current_user:
+            self._current_user.time_out = datetime.now()
+            self._status_label.config(text="Не авторизован", fg="#7f8c8d")
+            self._login_btn.config(state=tk.NORMAL)
+            self._logout_btn.config(state=tk.DISABLED)
+            self._current_user = None
+
+    # ---- Обновление таблицы ----
+    def _refresh_table(self):
+        for row in self._tree.get_children():
+            self._tree.delete(row)
+
+        category = self._category_var.get()
+        min_price = self._get_float(self._min_price_entry.get())
+        max_price = self._get_float(self._max_price_entry.get())
+
+        total_sum = 0
+        count = 0
+
+        for product in self._products:
+            if category != "Все" and product.category != category:
+                continue
+            if min_price is not None and product.price < min_price:
+                continue
+            if max_price is not None and product.price > max_price:
+                continue
+
+            self._tree.insert("", tk.END, values=(
+                product.entity_id,
+                product.name,
+                product.category,
+                f"{product.price:.2f}",
+                product.quantity,
+                f"{product.total_cost:.2f}"
+            ))
+            total_sum += product.total_cost
+            count += 1
+
+        self._stats_label.config(
+            text=f"Показано товаров: {count} | Общая стоимость: {total_sum:.2f} руб."
+        )
+
+    # ---- Сброс фильтра ----
+    def _reset_filter(self):
+        self._category_var.set("Все")
+        self._min_price_entry.delete(0, tk.END)
+        self._max_price_entry.delete(0, tk.END)
+        self._refresh_table()
+
+    # ---- Вспомогательный метод ----
+    @staticmethod
+    def _get_float(text: str):
+        try:
+            return float(text)
+        except (ValueError, TypeError):
+            return None
+
+    # ---- Добавление товара ----
+    def _add_product(self):
+        if not self._current_user:
+            messagebox.showwarning("Внимание", "Сначала авторизуйтесь!")
+            return
+
+        ProductDialog(self, self._on_product_added)
+
+    def _on_product_added(self, name, price, quantity, category):
+        new_id = max((p.entity_id for p in self._products), default=0) + 1
+        product = Product(new_id, name, price, quantity, category)
+        self._products.append(product)
+        self._product_map.set(new_id, product)
+        self._refresh_table()
+
+    # ---- Редактирование товара ----
+    def _edit_product(self):
+        if not self._current_user:
+            messagebox.showwarning("Внимание", "Сначала авторизуйтесь!")
+            return
+
+        selected = self._tree.selection()
+        if not selected:
+            messagebox.showwarning("Внимание", "Выберите товар для редактирования!")
+            return
+
+        item = self._tree.item(selected[0])
+        product_id = item["values"][0]
+        product = self._product_map.get(product_id)
+
+        if product:
+            ProductDialog(self, self._on_product_edited, product)
+
+    def _on_product_edited(self, name, price, quantity, category, product_id=None):
+        product = self._product_map.get(product_id)
+        if product:
+            product.name = name
+            product.price = price
+            product.quantity = quantity
+            product.category = category
+            self._refresh_table()
+
+    # ---- Удаление товара ----
+    def _delete_product(self):
+        if not self._current_user:
+            messagebox.showwarning("Внимание", "Сначала авторизуйтесь!")
+            return
+
+        selected = self._tree.selection()
+        if not selected:
+            messagebox.showwarning("Внимание", "Выберите товар для удаления!")
+            return
+
+        item = self._tree.item(selected[0])
+        product_id = item["values"][0]
+        product = self._product_map.get(product_id)
+
+        if product and messagebox.askyesno("Подтверждение", f"Удалить товар «{product.name}»?"):
+            self._products.remove(product)
+            self._product_map.remove(product_id)
+            self._refresh_table()
+
+    # ---- Сохранение отчёта при закрытии ----
+    def _on_close(self):
+        if self._current_user and self._current_user.time_out is None:
+            self._current_user.time_out = datetime.now()
+
+        try:
+            with open("report.txt", "w", encoding="utf-8") as f:
+                f.write("+------------------------------------+\n")
+                f.write("| login    | time_in            | time_out           |\n")
+                f.write("|----------|--------------------|--------------------|\n")
+
+                fmt = "%d.%m.%Y %H:%M:%S"
+                for user in self._users:
+                    if user.time_in:
+                        time_in = user.time_in.strftime(fmt)
+                        time_out = user.time_out.strftime(fmt) if user.time_out else "—"
+                        f.write(f"| {user.login:<8} | {time_in:<18} | {time_out:<18} |\n")
+
+                f.write("+------------------------------------+\n")
+        except Exception as e:
+            print(f"Ошибка сохранения отчёта: {e}")
+
+        self.destroy()
+
+
+# ============================================================
+# ДИАЛОГ ДОБАВЛЕНИЯ / РЕДАКТИРОВАНИЯ ТОВАРА
+# ============================================================
+
+class ProductDialog(tk.Toplevel):
+    """Диалоговое окно для добавления/редактирования товара"""
+
+    def __init__(self, parent, callback, product=None):
+        super().__init__(parent)
+        self.title("Редактирование товара" if product else "Добавление товара")
+        self.geometry("400x300")
+        self.resizable(False, False)
+        self.configure(bg="#f0f0f0")
+        self.grab_set()
+
+        self._callback = callback
+        self._product = product
+
+        self._build_ui()
+        self._center_window(parent)
+
+        if product:
+            self._fill_fields()
+
+    def _build_ui(self):
+        frame = tk.Frame(self, bg="#f0f0f0", padx=20, pady=20)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        tk.Label(frame, text="Название:", bg="#f0f0f0").grid(row=0, column=0, sticky="e", pady=8)
+        self._name_entry = tk.Entry(frame, width=25)
+        self._name_entry.grid(row=0, column=1, pady=8)
+
+        tk.Label(frame, text="Цена:", bg="#f0f0f0").grid(row=1, column=0, sticky="e", pady=8)
+        self._price_entry = tk.Entry(frame, width=25)
+        self._price_entry.grid(row=1, column=1, pady=8)
+
+        tk.Label(frame, text="Количество:", bg="#f0f0f0").grid(row=2, column=0, sticky="e", pady=8)
+        self._qty_entry = tk.Entry(frame, width=25)
+        self._qty_entry.grid(row=2, column=1, pady=8)
+
+        tk.Label(frame, text="Категория:", bg="#f0f0f0").grid(row=3, column=0, sticky="e", pady=8)
+        self._category_combo = ttk.Combobox(
+            frame,
+            values=["Электроника", "Аксессуары", "Аудио", "Периферия", "Носители"],
+            width=23,
+            state="readonly"
+        )
+        self._category_combo.grid(row=3, column=1, pady=8)
+        self._category_combo.current(0)
+
+        btn_frame = tk.Frame(frame, bg="#f0f0f0")
+        btn_frame.grid(row=4, column=0, columnspan=2, pady=20)
+
+        tk.Button(
+            btn_frame, text="Сохранить", command=self._save,
+            bg="#2ecc71", fg="white", width=12, relief=tk.FLAT
+        ).pack(side=tk.LEFT, padx=5)
+
+        tk.Button(
+            btn_frame, text="Отмена", command=self.destroy,
+            bg="#95a5a6", fg="white", width=12, relief=tk.FLAT
+        ).pack(side=tk.LEFT, padx=5)
+
+    def _fill_fields(self):
+        self._name_entry.insert(0, self._product.name)
+        self._price_entry.insert(0, str(self._product.price))
+        self._qty_entry.insert(0, str(self._product.quantity))
+        self._category_combo.set(self._product.category)
+
+    def _save(self):
+        name = self._name_entry.get().strip()
+        price_text = self._price_entry.get().strip()
+        qty_text = self._qty_entry.get().strip()
+        category = self._category_combo.get()
+
+        if not name or not price_text or not qty_text:
+            messagebox.showwarning("Ошибка", "Заполните все поля!", parent=self)
+            return
+
+        try:
+            price = float(price_text)
+            qty = int(qty_text)
+        except ValueError:
+            messagebox.showwarning("Ошибка", "Некорректные числовые значения!", parent=self)
+            return
+
+        if price < 0 or qty < 0:
+            messagebox.showwarning("Ошибка", "Значения не могут быть отрицательными!", parent=self)
+            return
+
+        if self._product:
+            self._callback(name, price, qty, category, self._product.entity_id)
+        else:
+            self._callback(name, price, qty, category)
+
+        self.destroy()
+
+    def _center_window(self, parent):
+        self.update_idletasks()
+        w = self.winfo_width()
+        h = self.winfo_height()
+        px = parent.winfo_x()
+        py = parent.winfo_y()
+        pw = parent.winfo_width()
+        ph = parent.winfo_height()
+        x = px + (pw - w) // 2
+        y = py + (ph - h) // 2
+        self.geometry(f"{w}x{h}+{x}+{y}")
+
+
+# ============================================================
+# ТОЧКА ВХОДА
+# ============================================================
+
+if __name__ == "__main__":
+    app = App()
+    app.mainloop()
